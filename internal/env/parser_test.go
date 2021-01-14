@@ -30,6 +30,7 @@ EMPTY=
 func TestParseQuoted(t *testing.T) {
 	in := `DQ="line1\nline2"
 SQ='raw\nnot escaped'
+INLINE=value # trailing comment
 SPACES="  padded  "`
 	doc, err := Parse(strings.NewReader(in))
 	if err != nil {
@@ -38,6 +39,7 @@ SPACES="  padded  "`
 	want := map[string]string{
 		"DQ":     "line1\nline2",
 		"SQ":     `raw\nnot escaped`,
+		"INLINE": "value",
 		"SPACES": "  padded  ",
 	}
 	for k, w := range want {

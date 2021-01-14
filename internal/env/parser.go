@@ -12,7 +12,7 @@ import (
 // beginning with '#', an optional leading "export ", and single- or
 // double-quoted values. Double-quoted values support the common backslash
 // escapes (\n, \r, \t, \\, \"). Unquoted values are trimmed of surrounding
-// whitespace.
+// whitespace and may carry an inline comment introduced by " #".
 func Parse(r io.Reader) (*Doc, error) {
 	doc := New()
 	sc := bufio.NewScanner(r)
@@ -83,6 +83,9 @@ func parseValue(s string) (string, error) {
 	case '\'':
 		return parseSingleQuoted(s)
 	default:
+		if i := strings.Index(s, " #"); i >= 0 {
+			s = s[:i]
+		}
 		return strings.TrimRight(s, " \t"), nil
 	}
 }
