@@ -5,7 +5,8 @@ import "strings"
 // SecretMatchers are the substrings (case-insensitive) that mark a key as
 // sensitive by default.
 var SecretMatchers = []string{
-	"SECRET", "PASSWORD", "TOKEN", "API_KEY", "PRIVATE",
+	"SECRET", "PASSWORD", "PASSWD", "TOKEN", "APIKEY", "API_KEY",
+	"PRIVATE", "CREDENTIAL", "AUTH", "ACCESS_KEY",
 }
 
 // IsSecretKey reports whether key looks sensitive according to matchers. When
