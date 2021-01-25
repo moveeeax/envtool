@@ -16,6 +16,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(
 		newMergeCmd(),
 		newExportCmd(),
+		newDiffCmd(),
 	)
 	return root
 }
