@@ -1,5 +1,7 @@
 package env
 
+import "sort"
+
 // Entry is a single key/value pair from a dotenv document. Order of entries is
 // preserved so that formatting round-trips stay close to the original file.
 type Entry struct {
@@ -81,5 +83,17 @@ func (d *Doc) Keys() []string {
 func (d *Doc) Entries() []Entry {
 	out := make([]Entry, len(d.entries))
 	copy(out, d.entries)
+	return out
+}
+
+// SortedCopy returns a new document with the same entries ordered by key.
+func (d *Doc) SortedCopy() *Doc {
+	out := New()
+	keys := d.Keys()
+	sort.Strings(keys)
+	for _, k := range keys {
+		v, _ := d.Get(k)
+		out.Set(k, v)
+	}
 	return out
 }
