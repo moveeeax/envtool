@@ -19,6 +19,7 @@ func newRootCmd() *cobra.Command {
 		newValidateCmd(),
 		newRedactCmd(),
 		newExportCmd(),
+		newKeysCmd(),
 	)
 	return root
 }
