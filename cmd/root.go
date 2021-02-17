@@ -20,6 +20,7 @@ func newRootCmd() *cobra.Command {
 		newRedactCmd(),
 		newExportCmd(),
 		newKeysCmd(),
+		newGetCmd(),
 	)
 	return root
 }
