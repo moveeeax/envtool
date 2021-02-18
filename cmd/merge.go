@@ -8,7 +8,10 @@ import (
 )
 
 func newMergeCmd() *cobra.Command {
-	var format string
+	var (
+		format   string
+		sortKeys bool
+	)
 	cmd := &cobra.Command{
 		Use:   "merge [flags] FILE...",
 		Short: "Merge multiple .env files (later files win)",
@@ -26,9 +29,14 @@ func newMergeCmd() *cobra.Command {
 				}
 				docs = append(docs, doc)
 			}
-			return env.Export(os.Stdout, env.Merge(docs...), f)
+			merged := env.Merge(docs...)
+			if sortKeys {
+				merged = merged.SortedCopy()
+			}
+			return env.Export(os.Stdout, merged, f)
 		},
 	}
 	cmd.Flags().StringVarP(&format, "format", "f", "dotenv", "output format: dotenv|shell|json|yaml")
+	cmd.Flags().BoolVar(&sortKeys, "sort", false, "sort keys alphabetically")
 	return cmd
 }

@@ -8,7 +8,10 @@ import (
 )
 
 func newExportCmd() *cobra.Command {
-	var format string
+	var (
+		format   string
+		sortKeys bool
+	)
 	cmd := &cobra.Command{
 		Use:   "export [flags] FILE",
 		Short: "Convert a .env file to another format",
@@ -22,9 +25,13 @@ func newExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if sortKeys {
+				doc = doc.SortedCopy()
+			}
 			return env.Export(os.Stdout, doc, f)
 		},
 	}
 	cmd.Flags().StringVarP(&format, "format", "f", "json", "output format: dotenv|shell|json|yaml")
+	cmd.Flags().BoolVar(&sortKeys, "sort", false, "sort keys alphabetically")
 	return cmd
 }
