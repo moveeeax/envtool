@@ -70,6 +70,16 @@ Convert a file to another format: `dotenv`, `shell`, `json` or `yaml`.
 ```sh
 envtool export -f shell .env > env.sh && source env.sh
 envtool export -f yaml .env
+envtool export -f json --sort .env
+```
+
+### keys / get
+
+Inspect a file without printing every value.
+
+```sh
+envtool keys --sort .env
+envtool get DATABASE_URL .env
 ```
 
 ## Formats
