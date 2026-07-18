@@ -3,7 +3,7 @@ package cmd
 import (
 	"os"
 
-	"github.com/moveeeax/envtool/internal/env"
+	"github.com/cybercapybara/envtool/internal/env"
 	"github.com/spf13/cobra"
 )
 

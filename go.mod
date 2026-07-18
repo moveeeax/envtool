@@ -1,4 +1,4 @@
-module github.com/moveeeax/envtool
+module github.com/cybercapybara/envtool
 
 go 1.16
 

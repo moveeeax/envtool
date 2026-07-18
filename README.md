@@ -10,13 +10,13 @@ values in a slightly different shape. `envtool` keeps those chores honest.
 ## Install
 
 ```sh
-go install github.com/moveeeax/envtool@latest
+go install github.com/cybercapybara/envtool@latest
 ```
 
 Or build from source:
 
 ```sh
-git clone https://github.com/moveeeax/envtool
+git clone https://github.com/cybercapybara/envtool
 cd envtool
 go build -o envtool .
 ```
