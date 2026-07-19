@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cybercapybara/envtool/internal/env"
+	"github.com/moveeeax/envtool/internal/env"
 	"github.com/spf13/cobra"
 )
 

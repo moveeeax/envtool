@@ -1,6 +1,6 @@
 BINARY := envtool
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-LDFLAGS := -X github.com/cybercapybara/envtool/cmd.version=$(VERSION)
+LDFLAGS := -X github.com/moveeeax/envtool/cmd.version=$(VERSION)
 
 .PHONY: build test vet fmt clean
 

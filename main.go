@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cybercapybara/envtool/cmd"
+	"github.com/moveeeax/envtool/cmd"
 )
 
 func main() {
