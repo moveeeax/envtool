@@ -20,8 +20,13 @@ func newValidateCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			keys := strings.Split(required, ",")
-			violations := env.Validate(doc, env.RulesFromKeys(keys))
+			rules := env.RulesFromKeys(strings.Split(required, ","))
+			if len(rules) == 0 {
+				// Without this guard a missing or mistyped --required silently
+				// succeeds, so a CI gate would pass while checking nothing.
+				return fmt.Errorf("--required must name at least one key")
+			}
+			violations := env.Validate(doc, rules)
 			if len(violations) == 0 {
 				return nil
 			}

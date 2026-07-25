@@ -31,6 +31,34 @@ func TestRedact(t *testing.T) {
 	}
 }
 
+// TestIsSecretKeyIgnoresMatcherWhitespace pins the fix for `--match
+// "TOKEN, SECRET"`: the untrimmed " SECRET" matcher never matched any key, so
+// secrets the user explicitly asked to hide were printed in the clear.
+func TestIsSecretKeyIgnoresMatcherWhitespace(t *testing.T) {
+	matchers := []string{"TOKEN", " SECRET", "PIN\t"}
+	for _, k := range []string{"API_TOKEN", "MY_SECRET", "CARD_PIN"} {
+		if !IsSecretKey(k, matchers) {
+			t.Errorf("IsSecretKey(%q, %q) = false; want true", k, matchers)
+		}
+	}
+	if IsSecretKey("HOST", matchers) {
+		t.Error("IsSecretKey(HOST) = true; want false")
+	}
+}
+
+// TestIsSecretKeyBlankMatchersFallBack checks that a list with nothing usable in
+// it falls back to the built-in matchers rather than matching nothing.
+func TestIsSecretKeyBlankMatchersFallBack(t *testing.T) {
+	for _, matchers := range [][]string{nil, {}, {""}, {"  ", "\t"}} {
+		if !IsSecretKey("DB_PASSWORD", matchers) {
+			t.Errorf("IsSecretKey(DB_PASSWORD, %q) = false; want the built-in matchers to apply", matchers)
+		}
+		if IsSecretKey("HOST", matchers) {
+			t.Errorf("IsSecretKey(HOST, %q) = true; want false", matchers)
+		}
+	}
+}
+
 func TestRedactCustomMatchers(t *testing.T) {
 	doc := docOf("PIN", "1234", "NAME", "ok")
 	got := Redact(doc, []string{"PIN"}, 0)

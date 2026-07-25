@@ -9,10 +9,15 @@ import (
 )
 
 // Parse reads a dotenv document from r. It understands blank lines, comments
-// beginning with '#', an optional leading "export ", and single- or
-// double-quoted values. Double-quoted values support the common backslash
-// escapes (\n, \r, \t, \\, \"). Unquoted values are trimmed of surrounding
-// whitespace and may carry an inline comment introduced by " #".
+// beginning with '#', an optional leading "export" (followed by spaces or
+// tabs), and single- or double-quoted values. Double-quoted values support the
+// common backslash escapes (\n, \r, \t, \\, \"). Unquoted values are trimmed of
+// surrounding whitespace and may carry an inline comment introduced by " #".
+//
+// Parse errors deliberately report only the line number and never echo the
+// content of the offending line: dotenv files hold secrets, and a malformed
+// line is frequently a stray continuation of a multi-line credential that must
+// not end up in stderr, CI logs or an issue report.
 func Parse(r io.Reader) (*Doc, error) {
 	doc := New()
 	sc := bufio.NewScanner(r)
@@ -20,15 +25,15 @@ func Parse(r io.Reader) (*Doc, error) {
 	line := 0
 	for sc.Scan() {
 		line++
-		raw := strings.TrimRight(sc.Text(), "\r\n")
-		trimmed := strings.TrimSpace(raw)
+		trimmed := strings.TrimSpace(strings.TrimRight(sc.Text(), "\r\n"))
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 			continue
 		}
-		trimmed = strings.TrimPrefix(trimmed, "export ")
+		trimmed = trimExportPrefix(trimmed)
 		eq := strings.IndexByte(trimmed, '=')
 		if eq < 0 {
-			return nil, fmt.Errorf("line %d: missing '=' in %q", line, raw)
+			// Deliberately does not quote the line; see the Parse doc comment.
+			return nil, fmt.Errorf("line %d: missing '=' separator", line)
 		}
 		key := strings.TrimSpace(trimmed[:eq])
 		if err := validateKey(key); err != nil {
@@ -54,6 +59,20 @@ func ParseFile(path string) (*Doc, error) {
 	}
 	defer f.Close()
 	return Parse(f)
+}
+
+// trimExportPrefix removes a leading "export" keyword and the horizontal
+// whitespace after it. A key literally named "export" (as in "export=1") is
+// left alone because no separator follows the keyword.
+func trimExportPrefix(s string) string {
+	const kw = "export"
+	if !strings.HasPrefix(s, kw) || len(s) == len(kw) {
+		return s
+	}
+	if c := s[len(kw)]; c != ' ' && c != '\t' {
+		return s
+	}
+	return strings.TrimLeft(s[len(kw):], " \t")
 }
 
 func validateKey(key string) error {

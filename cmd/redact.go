@@ -10,8 +10,8 @@ import (
 
 func newRedactCmd() *cobra.Command {
 	var (
-		format  string
-		keep    int
+		format   string
+		keep     int
 		matchStr string
 	)
 	cmd := &cobra.Command{

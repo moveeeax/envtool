@@ -63,6 +63,41 @@ func TestParseErrors(t *testing.T) {
 	}
 }
 
+// TestParseErrorsDoNotLeakLineContent pins the fix for parse errors echoing the
+// raw line. A line without '=' is very often a stray continuation of a
+// multi-line credential, and the message ends up in stderr and CI logs.
+func TestParseErrorsDoNotLeakLineContent(t *testing.T) {
+	const secret = "MIIEowIBAAKCAQEAsuperSecretKeyMaterial"
+	in := "PRIVATE_KEY=-----BEGIN RSA PRIVATE KEY-----\n" + secret + "\n"
+	_, err := Parse(strings.NewReader(in))
+	if err == nil {
+		t.Fatal("Parse expected an error for a line without '='")
+	}
+	if strings.Contains(err.Error(), secret) {
+		t.Errorf("error %q leaks the line content", err)
+	}
+	if !strings.Contains(err.Error(), "line 2") {
+		t.Errorf("error %q should still identify the line number", err)
+	}
+}
+
+func TestParseExportPrefix(t *testing.T) {
+	in := "export A=1\nexport\tB=2\nexport   C=3\nexport=4\nD=5\n"
+	doc, err := Parse(strings.NewReader(in))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	want := map[string]string{"A": "1", "B": "2", "C": "3", "export": "4", "D": "5"}
+	if doc.Len() != len(want) {
+		t.Fatalf("Len = %d, want %d (keys %v)", doc.Len(), len(want), doc.Keys())
+	}
+	for k, w := range want {
+		if v, ok := doc.Get(k); !ok || v != w {
+			t.Errorf("Get(%q) = %q,%v; want %q", k, v, ok, w)
+		}
+	}
+}
+
 func TestParseLastWins(t *testing.T) {
 	doc, err := Parse(strings.NewReader("K=1\nK=2\nK=3"))
 	if err != nil {
