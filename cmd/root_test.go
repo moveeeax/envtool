@@ -56,6 +56,46 @@ func TestValidateCommandFails(t *testing.T) {
 	}
 }
 
+// TestValidateCommandRejectsEmptyRequired pins the fix for `envtool validate`
+// exiting 0 when --required is absent or blank, which made a CI gate pass while
+// checking nothing at all.
+func TestValidateCommandRejectsEmptyRequired(t *testing.T) {
+	f := writeTemp(t, "e.env", "A=1\n")
+	for _, args := range [][]string{
+		{"validate", f},
+		{"validate", "--required", "", f},
+		{"validate", "--required", " , ", f},
+	} {
+		if _, err := run(t, args...); err == nil {
+			t.Errorf("run(%v) = nil error; want a failure for an empty --required", args)
+		}
+	}
+}
+
+func TestValidateCommandPasses(t *testing.T) {
+	f := writeTemp(t, "f.env", "A=1\nB=2\n")
+	if _, err := run(t, "validate", "--required", "A,B", f); err != nil {
+		t.Fatalf("validate: %v", err)
+	}
+}
+
+// TestRedactCommandMatcherWhitespace is the end-to-end counterpart of
+// TestIsSecretKeyIgnoresMatcherWhitespace: a space after the comma used to leave
+// the secret in the output.
+func TestRedactCommandMatcherWhitespace(t *testing.T) {
+	f := writeTemp(t, "r.env", "HOST=db.local\nMY_SECRET=hunter2\nAPI_TOKEN=abcdef\n")
+	out, err := run(t, "redact", "--match", "TOKEN, SECRET", f)
+	if err != nil {
+		t.Fatalf("redact: %v", err)
+	}
+	if strings.Contains(out, "hunter2") || strings.Contains(out, "abcdef") {
+		t.Errorf("redact leaked a secret value: %q", out)
+	}
+	if !strings.Contains(out, "HOST=db.local") {
+		t.Errorf("redact masked a non-secret key: %q", out)
+	}
+}
+
 func TestExportJSONCommand(t *testing.T) {
 	f := writeTemp(t, "d.env", "A=1\n")
 	out, err := run(t, "export", "-f", "json", f)

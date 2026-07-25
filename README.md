@@ -41,6 +41,10 @@ envtool diff .env.example .env
 envtool diff --exit-code .env.example .env   # non-zero when they differ
 ```
 
+`diff` prints values, so treat its output as sensitive. Parse errors, by
+contrast, never echo the offending line — only its number — because a malformed
+line is often a stray continuation of a multi-line credential.
+
 ### validate
 
 Fail if required keys are missing or empty — handy in CI.
@@ -48,6 +52,9 @@ Fail if required keys are missing or empty — handy in CI.
 ```sh
 envtool validate --required DB_URL,API_KEY,PORT .env
 ```
+
+`--required` must name at least one key; `envtool validate .env` on its own is
+an error rather than a silent pass, so a misconfigured CI gate fails loudly.
 
 ### redact
 
@@ -61,17 +68,27 @@ envtool redact --match PIN,SEED .env
 
 Keys are treated as secret when they contain substrings like `SECRET`,
 `PASSWORD`, `TOKEN`, `API_KEY`, `PRIVATE`, `CREDENTIAL` (see `--match` to
-override).
+override). Matching is case-insensitive and whitespace around each `--match`
+entry is ignored, so `--match 'TOKEN, SECRET'` behaves like `--match
+'TOKEN,SECRET'`. If `--match` ends up with no usable entries the built-in list
+applies, so a malformed value never quietly disables redaction.
 
 ### export
 
 Convert a file to another format: `dotenv`, `shell`, `json` or `yaml`.
 
 ```sh
-envtool export -f shell .env > env.sh && source env.sh
+(umask 077; envtool export -f shell .env > env.sh) && . ./env.sh
 envtool export -f yaml .env
 envtool export -f json --sort .env
 ```
+
+`envtool` itself only ever writes to stdout — it never creates or overwrites a
+file. That makes your shell's redirection responsible for the permissions of
+anything you capture, hence the `umask 077` above: without it `env.sh` lands
+world-readable with your secrets in it.
+
+Key order follows the source file for every format (`--sort` overrides it).
 
 ### keys / get
 
@@ -88,14 +105,15 @@ envtool get DATABASE_URL .env
 |----------|--------------------------------------------------|
 | `dotenv` | `KEY=VALUE`, values quoted only when needed      |
 | `shell`  | `export KEY='VALUE'`, safe to `eval`             |
-| `json`   | flat object of string values                     |
-| `yaml`   | flat mapping of string values                    |
+| `json`   | flat object of string values, in file order      |
+| `yaml`   | flat mapping of string values, quoted when a plain scalar would load as a bool, null, number or date |
 
 ## Development
 
 ```sh
-go test ./...
+gofmt -s -l .        # must print nothing
 go vet ./...
+go test -race ./...
 ```
 
 ## License

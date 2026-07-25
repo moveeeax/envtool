@@ -3,6 +3,37 @@
 All notable changes to this project are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+- `redact --match` no longer ignores entries with surrounding whitespace.
+  `--match 'TOKEN, SECRET'` previously left every `SECRET` key unredacted
+  because the matcher was compared as `" SECRET"`. A `--match` list with no
+  usable entries now falls back to the built-in matchers instead of matching
+  nothing.
+- Parse errors no longer echo the content of the offending line. A line without
+  `=` is commonly a stray continuation of a multi-line credential, so the raw
+  text could reach stderr and CI logs; only the line number is reported now.
+- `validate` requires `--required` to name at least one key. Running
+  `envtool validate .env` with no (or an empty) `--required` previously exited
+  0 without checking anything, silently passing a CI gate.
+- YAML export quotes values that a loader would resolve to a bool, null, number
+  or date. `DEBUG=true`, `PORT=5432` and `VERSION=1.10` used to emit non-string
+  scalars (and `1.10` came back as `1.1`), which also made the output invalid
+  as Kubernetes ConfigMap data.
+- JSON export keeps the document's key order instead of alphabetising it, which
+  had made `--sort` a no-op for that format.
+- dotenv export quotes values containing a carriage return; a value ending in
+  `\r` was silently truncated when the output was read back.
+- The parser accepts `export` followed by tabs or multiple spaces, not just a
+  single space.
+
+### Changed
+- CI runs on `actions/checkout@v4` and `actions/setup-go@v5` with a current Go
+  release, and now also enforces `gofmt -s`. The pinned Go 1.16 and the v2
+  actions were long out of support.
+- `go.mod` declares Go 1.22 as the minimum toolchain.
+
 ## [0.2.0] - 2021-03-19
 
 ### Added
