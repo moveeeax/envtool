@@ -108,6 +108,10 @@ envtool get DATABASE_URL .env
 | `json`   | flat object of string values, in file order      |
 | `yaml`   | flat mapping of string values, quoted when a plain scalar would load as a bool, null, number or date |
 
+A leading UTF-8 byte-order mark on input is stripped rather than parsed as
+part of the first key, so files saved by Windows tools (PowerShell's
+`Out-File`, Notepad's default "UTF-8") work without editing.
+
 ## Development
 
 ```sh

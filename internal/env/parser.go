@@ -18,6 +18,12 @@ import (
 // content of the offending line: dotenv files hold secrets, and a malformed
 // line is frequently a stray continuation of a multi-line credential that must
 // not end up in stderr, CI logs or an issue report.
+//
+// A leading UTF-8 byte-order mark is stripped before the first line is
+// parsed. Editors and tools on Windows commonly write one (PowerShell's
+// `Out-File`, Notepad's default "UTF-8" encoding), and without this the BOM
+// glues itself onto the first key, so every command fails on line 1 of an
+// otherwise valid file.
 func Parse(r io.Reader) (*Doc, error) {
 	doc := New()
 	sc := bufio.NewScanner(r)
@@ -25,7 +31,11 @@ func Parse(r io.Reader) (*Doc, error) {
 	line := 0
 	for sc.Scan() {
 		line++
-		trimmed := strings.TrimSpace(strings.TrimRight(sc.Text(), "\r\n"))
+		text := sc.Text()
+		if line == 1 {
+			text = strings.TrimPrefix(text, "\uFEFF")
+		}
+		trimmed := strings.TrimSpace(strings.TrimRight(text, "\r\n"))
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 			continue
 		}

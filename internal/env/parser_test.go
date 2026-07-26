@@ -98,6 +98,28 @@ func TestParseExportPrefix(t *testing.T) {
 	}
 }
 
+// TestParseStripsLeadingBOM pins the fix for a UTF-8 byte-order mark on the
+// first line. Editors and tools on Windows commonly write one (PowerShell's
+// `Out-File`, Notepad's default "UTF-8"), and without stripping it the BOM
+// glued itself onto the first key, failing every command on an otherwise
+// valid file.
+func TestParseStripsLeadingBOM(t *testing.T) {
+	in := "\xEF\xBB\xBFFOO=bar\nBAZ=qux\n"
+	doc, err := Parse(strings.NewReader(in))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if v, ok := doc.Get("FOO"); !ok || v != "bar" {
+		t.Errorf("Get(FOO) = %q,%v; want \"bar\",true", v, ok)
+	}
+	if v, ok := doc.Get("BAZ"); !ok || v != "qux" {
+		t.Errorf("Get(BAZ) = %q,%v; want \"qux\",true", v, ok)
+	}
+	if doc.Has("\uFEFFFOO") {
+		t.Error("the BOM should be stripped, not become part of the key")
+	}
+}
+
 func TestParseLastWins(t *testing.T) {
 	doc, err := Parse(strings.NewReader("K=1\nK=2\nK=3"))
 	if err != nil {

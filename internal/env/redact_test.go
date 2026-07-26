@@ -1,6 +1,9 @@
 package env
 
-import "testing"
+import (
+	"testing"
+	"unicode/utf8"
+)
 
 func TestIsSecretKey(t *testing.T) {
 	secret := []string{"DB_PASSWORD", "API_KEY", "github_token", "AWS_SECRET_ACCESS_KEY"}
@@ -56,6 +59,23 @@ func TestIsSecretKeyBlankMatchersFallBack(t *testing.T) {
 		if IsSecretKey("HOST", matchers) {
 			t.Errorf("IsSecretKey(HOST, %q) = true; want false", matchers)
 		}
+	}
+}
+
+// TestRedactKeepCountsRunesNotBytes pins the fix for mask() slicing by byte
+// index. "détente" has a 2-byte 'é'; --keep 2 used to cut the value after the
+// first byte of that rune, leaving invalid UTF-8 in the output that a JSON or
+// YAML encoder would silently mangle instead of the two-character prefix the
+// caller asked to keep.
+func TestRedactKeepCountsRunesNotBytes(t *testing.T) {
+	doc := docOf("API_SECRET", "détente")
+	got := Redact(doc, nil, 2)
+	v, _ := got.Get("API_SECRET")
+	if !utf8.ValidString(v) {
+		t.Fatalf("masked value %q is not valid UTF-8", v)
+	}
+	if want := "dé********"; v != want {
+		t.Errorf("masked value = %q; want %q", v, want)
 	}
 }
 
