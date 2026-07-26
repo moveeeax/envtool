@@ -8,6 +8,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// errDifferencesFound is returned by `diff --exit-code` when the two files
+// differ. Its message is empty: diff has already written the differences to
+// stdout, so main should set the process exit code without printing a
+// redundant second "envtool: ..." line to stderr.
+//
+// Returning this from RunE (rather than calling os.Exit(1) directly, as a
+// previous version did) keeps the command testable in-process: os.Exit tears
+// down the whole test binary, not just the command under test, so that
+// approach could never be exercised by cmd's own test suite.
+type errDifferencesFound struct{}
+
+func (errDifferencesFound) Error() string { return "" }
+
+// ExitCode reports the process exit code main should use for this error.
+func (errDifferencesFound) ExitCode() int { return 1 }
+
 func newDiffCmd() *cobra.Command {
 	var exitCode bool
 	cmd := &cobra.Command{
@@ -35,7 +51,7 @@ func newDiffCmd() *cobra.Command {
 				}
 			}
 			if exitCode && len(changes) > 0 {
-				os.Exit(1)
+				return errDifferencesFound{}
 			}
 			return nil
 		},

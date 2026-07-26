@@ -6,6 +6,18 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Fixed
+- The parser strips a leading UTF-8 byte-order mark instead of gluing it onto
+  the first key. Windows tools (PowerShell's `Out-File`, Notepad's default
+  "UTF-8") commonly write one, and every command used to fail on line 1 of an
+  otherwise valid file.
+- `redact --keep` slices by rune instead of byte. A secret containing a
+  multi-byte character (accented letters, non-Latin scripts, emoji) could be
+  cut mid-character, producing invalid UTF-8 that a JSON or YAML encoder would
+  silently mangle instead of the readable prefix that was asked for.
+- `diff --exit-code` now returns a typed error instead of calling `os.Exit(1)`
+  from inside the command. Behavior at the command line is unchanged, but the
+  command is now covered by tests: the previous approach tore down the whole
+  process, so it could never be exercised in-process by the test suite.
 - `redact --match` no longer ignores entries with surrounding whitespace.
   `--match 'TOKEN, SECRET'` previously left every `SECRET` key unredacted
   because the matcher was compared as `" SECRET"`. A `--match` list with no
