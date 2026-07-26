@@ -55,12 +55,19 @@ func Redact(doc *Doc, matchers []string, keep int) *Doc {
 	return out
 }
 
+// mask keeps up to keep leading characters of value and replaces the rest
+// with '*'. It counts and slices by rune, not byte: a secret with a
+// multi-byte character (accented letters, non-Latin scripts, emoji) sliced by
+// byte index can land mid-character, producing invalid UTF-8 that downstream
+// JSON/YAML encoders silently mangle instead of the readable prefix a caller
+// asked to keep.
 func mask(value string, keep int) string {
 	if keep < 0 {
 		keep = 0
 	}
-	if keep == 0 || len(value) <= keep {
+	runes := []rune(value)
+	if keep == 0 || len(runes) <= keep {
 		return "********"
 	}
-	return value[:keep] + strings.Repeat("*", 8)
+	return string(runes[:keep]) + strings.Repeat("*", 8)
 }
