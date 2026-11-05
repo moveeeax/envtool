@@ -1,5 +1,8 @@
 # envtool
 
+[![ci](https://github.com/moveeeax/envtool/actions/workflows/ci.yml/badge.svg)](https://github.com/moveeeax/envtool/actions/workflows/ci.yml)
+[![Go](https://img.shields.io/badge/go-1.26%2B-00ADD8?logo=go)](go.mod)
+
 A small, dependency-light CLI for working with `.env` files: merge, diff,
 validate, redact and convert them between formats.
 
@@ -8,6 +11,8 @@ Managing dotenv files across environments gets messy fast — keys drift between
 values in a slightly different shape. `envtool` keeps those chores honest.
 
 ## Install
+
+Requires Go 1.26 or newer.
 
 ```sh
 go install github.com/moveeeax/envtool@latest
