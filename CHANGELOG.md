@@ -18,6 +18,22 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   from inside the command. Behavior at the command line is unchanged, but the
   command is now covered by tests: the previous approach tore down the whole
   process, so it could never be exercised in-process by the test suite.
+
+### Changed
+- Upgraded `github.com/spf13/cobra` from v1.1.3 to v1.10.2. This drops the old
+  viper/protobuf/pubsub dependency graph that cobra 1.1 pulled in. Cobra now
+  also provides a built-in `completion` command that generates shell
+  completion scripts.
+- `go.mod` declares Go 1.26 as the minimum toolchain; CI tests Go 1.26 and
+  1.27 with `actions/checkout@v7` and `actions/setup-go@v7`.
+- Tests use `os.WriteFile` instead of the deprecated `io/ioutil`.
+
+## [0.1.0] - 2026-07-26
+
+First tagged release. It contains everything listed under the untagged 0.2.0
+and 0.1.0 milestones below, plus the following.
+
+### Fixed
 - `redact --match` no longer ignores entries with surrounding whitespace.
   `--match 'TOKEN, SECRET'` previously left every `SECRET` key unredacted
   because the matcher was compared as `" SECRET"`. A `--match` list with no
@@ -46,14 +62,14 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   actions were long out of support.
 - `go.mod` declares Go 1.22 as the minimum toolchain.
 
-## [0.2.0] - 2021-03-19
+## 0.2.0 milestone (2021-03-19, never tagged)
 
 ### Added
 - `keys` command to list the keys in a file, with an optional `--sort`.
 - `get` command to print the value of a single key.
 - `--sort` flag on `merge` and `export` to emit keys alphabetically.
 
-## [0.1.0] - 2021-02-26
+## 0.1.0 milestone (2021-02-26, never tagged)
 
 ### Added
 - `merge` command to overlay multiple `.env` files (later files win).
@@ -61,3 +77,6 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `validate` command to enforce required, non-empty keys.
 - `redact` command to mask sensitive values with configurable matchers.
 - `export` command to convert between dotenv, shell, JSON and YAML.
+
+[Unreleased]: https://github.com/moveeeax/envtool/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/moveeeax/envtool/releases/tag/v0.1.0
