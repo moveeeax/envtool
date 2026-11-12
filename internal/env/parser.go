@@ -103,8 +103,17 @@ func validateKey(key string) error {
 }
 
 func parseValue(s string) (string, error) {
+	value, _, err := parseValueRest(s)
+	return value, err
+}
+
+// parseValueRest parses a value like parseValue and also returns whatever
+// follows it on the line: the text after the closing quote of a quoted value,
+// or the " #..." inline comment of an unquoted one. Parse discards the rest;
+// ParseSchema reads annotations from it.
+func parseValueRest(s string) (value, rest string, err error) {
 	if s == "" {
-		return "", nil
+		return "", "", nil
 	}
 	switch s[0] {
 	case '"':
@@ -113,21 +122,21 @@ func parseValue(s string) (string, error) {
 		return parseSingleQuoted(s)
 	default:
 		if i := strings.Index(s, " #"); i >= 0 {
-			s = s[:i]
+			s, rest = s[:i], s[i+1:]
 		}
-		return strings.TrimRight(s, " \t"), nil
+		return strings.TrimRight(s, " \t"), rest, nil
 	}
 }
 
-func parseSingleQuoted(s string) (string, error) {
+func parseSingleQuoted(s string) (string, string, error) {
 	end := strings.IndexByte(s[1:], '\'')
 	if end < 0 {
-		return "", fmt.Errorf("unterminated single-quoted value")
+		return "", "", fmt.Errorf("unterminated single-quoted value")
 	}
-	return s[1 : 1+end], nil
+	return s[1 : 1+end], s[2+end:], nil
 }
 
-func parseDoubleQuoted(s string) (string, error) {
+func parseDoubleQuoted(s string) (string, string, error) {
 	var b strings.Builder
 	i := 1
 	for i < len(s) {
@@ -152,10 +161,10 @@ func parseDoubleQuoted(s string) (string, error) {
 			continue
 		}
 		if c == '"' {
-			return b.String(), nil
+			return b.String(), s[i+1:], nil
 		}
 		b.WriteByte(c)
 		i++
 	}
-	return "", fmt.Errorf("unterminated double-quoted value")
+	return "", "", fmt.Errorf("unterminated double-quoted value")
 }

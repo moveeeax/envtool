@@ -5,6 +5,22 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `check` validates a `.env` file, or the process environment with
+  `--from-env`, against types and constraints annotated in `.env.example`:
+  `int`, `bool`, `url`, `enum`, `port`, `duration`, `email`, `@required`,
+  `@pattern=/re/`, `@min`, `@max`. Ported from the archived envsync, with
+  stricter annotation parsing (typos are errors) and without `--fix`.
+- `check --format github|gitlab|sarif` emits CI annotations pointing at the
+  declaring line of the example; `--format json` and `-q` for scripts.
+- `check --from-env -- COMMAND` runs as a container entrypoint: it execs the
+  command only when the environment passes.
+- `schema` prints the annotated example as a Markdown table or a JSON Schema
+  (draft 2020-12). Defaults of secret-looking keys are omitted.
+- `diff --fingerprint` (HMAC-SHA256 keyed by `ENVTOOL_FINGERPRINT_SALT`),
+  `diff --shape` (length, character classes, token kind), `diff --format
+  json` and `diff --keys-only`.
+
 ### Fixed
 - The parser strips a leading UTF-8 byte-order mark instead of gluing it onto
   the first key. Windows tools (PowerShell's `Out-File`, Notepad's default
@@ -20,6 +36,10 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   process, so it could never be exercised in-process by the test suite.
 
 ### Changed
+- **Breaking:** `diff` no longer prints values. Output is `+ KEY`, `- KEY` and
+  `~ KEY (changed)`; pass `--show-values` for the old `KEY=value` and
+  `old -> new` lines. Pasting `diff` output into a PR or CI log used to leak
+  both the old and the new secret.
 - Upgraded `github.com/spf13/cobra` from v1.1.3 to v1.10.2. This drops the old
   viper/protobuf/pubsub dependency graph that cobra 1.1 pulled in. Cobra now
   also provides a built-in `completion` command that generates shell
