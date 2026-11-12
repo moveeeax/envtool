@@ -3,7 +3,7 @@
 All notable changes to this project are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.3.0] - 2026-11-12
 
 ### Added
 - `check` validates a `.env` file, or the process environment with
@@ -21,6 +21,14 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `diff --shape` (length, character classes, token kind), `diff --format
   json` and `diff --keys-only`.
 
+### Changed
+- **Breaking:** `diff` no longer prints values. Output is `+ KEY`, `- KEY` and
+  `~ KEY (changed)`; pass `--show-values` for the old `KEY=value` and
+  `old -> new` lines. Pasting `diff` output into a PR or CI log used to leak
+  both the old and the new secret.
+
+## [0.2.0] - 2026-11-05
+
 ### Fixed
 - The parser strips a leading UTF-8 byte-order mark instead of gluing it onto
   the first key. Windows tools (PowerShell's `Out-File`, Notepad's default
@@ -36,10 +44,6 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   process, so it could never be exercised in-process by the test suite.
 
 ### Changed
-- **Breaking:** `diff` no longer prints values. Output is `+ KEY`, `- KEY` and
-  `~ KEY (changed)`; pass `--show-values` for the old `KEY=value` and
-  `old -> new` lines. Pasting `diff` output into a PR or CI log used to leak
-  both the old and the new secret.
 - Upgraded `github.com/spf13/cobra` from v1.1.3 to v1.10.2. This drops the old
   viper/protobuf/pubsub dependency graph that cobra 1.1 pulled in. Cobra now
   also provides a built-in `completion` command that generates shell
@@ -98,5 +102,6 @@ and 0.1.0 milestones below, plus the following.
 - `redact` command to mask sensitive values with configurable matchers.
 - `export` command to convert between dotenv, shell, JSON and YAML.
 
-[Unreleased]: https://github.com/moveeeax/envtool/compare/v0.1.0...HEAD
+[0.3.0]: https://github.com/moveeeax/envtool/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/moveeeax/envtool/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/moveeeax/envtool/releases/tag/v0.1.0
