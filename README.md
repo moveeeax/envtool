@@ -4,7 +4,8 @@
 [![Go](https://img.shields.io/badge/go-1.26%2B-00ADD8?logo=go)](go.mod)
 
 A small, dependency-light CLI for working with `.env` files: merge, diff,
-validate, redact and convert them between formats.
+validate, check against a typed `.env.example`, redact and convert them
+between formats.
 
 Managing dotenv files across environments gets messy fast — keys drift between
 `.env.example` and `.env`, secrets leak into logs, and every service wants the
@@ -39,16 +40,43 @@ envtool merge -f json base.env override.env
 
 ### diff
 
-Show what changed between two files (`+` added, `-` removed, `~` changed).
+Show which keys changed between two files (`+` added, `-` removed, `~`
+changed). Values are not printed, so the output can go into a rotation PR or
+a CI log.
 
 ```sh
-envtool diff .env.example .env
+envtool diff .env.staging .env.prod
 envtool diff --exit-code .env.example .env   # non-zero when they differ
+envtool diff -f json .env.old .env.new       # [{"key": ..., "kind": ...}]
 ```
 
-`diff` prints values, so treat its output as sensitive. Parse errors, by
-contrast, never echo the offending line — only its number — because a malformed
-line is often a stray continuation of a multi-line credential.
+```text
+- OLD_KEY
++ NEW_KEY
+~ API_KEY (changed)
+```
+
+| Flag            | Prints                                                        |
+|-----------------|---------------------------------------------------------------|
+| `--keys-only`   | keys and kinds only; the default, spelled out                 |
+| `--fingerprint` | a 12-hex-character HMAC-SHA256 of each side (`fp=...`)        |
+| `--shape`       | length, character classes and token kind of each side         |
+| `--show-values` | the values themselves (`~ KEY: old -> new`); output is secret |
+
+`--fingerprint` keys the hash with `ENVTOOL_FINGERPRINT_SALT`. Two runs with
+the same salt print the same fingerprint for the same value, so a reviewer can
+confirm that prod now holds what staging holds without seeing either. Without
+the variable a random salt is used and fingerprints only compare within that
+run. Anyone holding the salt can test guesses against a fingerprint, so keep
+the salt as secret as the values.
+
+`--shape` reports, per side, something like
+`len=40 chars=lower+digit kind=hex`. The kinds are `empty`, `int`, `bool`,
+`uuid`, `jwt`, `url`, `hex`, `base64` (16+ characters for the last two) and
+`text`; a rotated token whose kind changed is worth a second look.
+
+Parse errors never echo the offending line, only its number, because a
+malformed line is often a stray continuation of a multi-line credential.
 
 ### validate
 
@@ -60,6 +88,99 @@ envtool validate --required DB_URL,API_KEY,PORT .env
 
 `--required` must name at least one key; `envtool validate .env` on its own is
 an error rather than a silent pass, so a misconfigured CI gate fails loudly.
+
+### check
+
+Validate a `.env` file, or the process environment, against the contract
+declared by annotations in `.env.example`. This is the `check` command of the
+archived [envsync](https://github.com/moveeeax/envsync).
+
+```sh
+envtool check                                  # .env against .env.example
+envtool check --example config/.env.example --env .env.ci --strict
+envtool check --format github                  # annotations on the PR
+envtool check --from-env -- ./app --serve      # container entrypoint
+```
+
+Annotations go in comments, either on the lines just above a key (a blank
+line ends the block) or after the value:
+
+```dotenv
+# Port the HTTP server listens on
+# @type=port @required
+PORT=8080
+
+# @type=enum(dev,staging,prod) @required
+APP_ENV=dev
+
+# @pattern=/^[a-z]{2}-[a-z]+-\d$/
+REGION=eu-west-1
+
+SESSION_KEY=changeme # @required @min=32 @max=32
+TIMEOUT=30s          # @type=duration
+ALERTS_TO=ops@example.com # @type=email
+```
+
+| Annotation        | Meaning                                                            |
+|-------------------|--------------------------------------------------------------------|
+| `@type=NAME`      | `string` (default), `int`, `bool`, `url`, `port` (1-65535), `duration` (Go `time.ParseDuration`, e.g. `1h30m`), `email` (a bare address) |
+| `@type=enum(a,b)` | one of the listed values; `@enum=a, b` is the same                 |
+| `@required`       | the key must be present and non-empty                              |
+| `@pattern=/re/`   | the value must match the Go regular expression; it is not anchored, so write `^...$` for a full match |
+| `@min=N` `@max=N` | the number for `int` and `port`, the length in characters otherwise |
+
+An unknown type, a regex that does not compile or `@min` above `@max` is an
+error with the line number, not a silent fallback to `string`.
+
+Findings are `missing` (required key absent or empty), `mismatch` (value fails
+its type or constraint) and `extra` (key not in the example; fails only with
+`--strict`). Messages give the length of an offending value, never the value,
+unless `--show-values` is passed.
+
+`--format` takes `text` (default), `json`, `github` (workflow commands that
+annotate the declaring line of `.env.example`), `gitlab` (a
+[Code Quality](https://docs.gitlab.com/ci/testing/code_quality/) report) or
+`sarif` (SARIF 2.1.0, e.g. for GitHub code scanning). `-q` prints nothing and
+reports through the exit code alone.
+
+`--from-env` checks `os.Environ()` instead of a file, for containers and
+Kubernetes where config arrives as real variables. Extra keys are not
+reported there (every process has `PATH` and `HOME`), and `--strict` is
+rejected. Put a command after `--` and `check` becomes an entrypoint wrapper:
+it prints any problems to stderr and exits 1, or, when the environment
+passes, replaces itself with the command via `exec`, so the app keeps PID 1
+and receives signals directly. On Windows, which has no `exec`, the command
+runs as a child and its exit code is passed through.
+
+```dockerfile
+ENTRYPOINT ["envtool", "check", "--example", "/app/.env.example", "--from-env", "--"]
+CMD ["/app/server"]
+```
+
+Coming from envsync: `-f/--env FILE` is now `--env FILE`, `--json` is
+`--format json`. `--fix` was not carried over, because envtool never writes
+files; copy the missing keys from `envtool schema` or the example by hand.
+
+### schema
+
+Document the annotated example for a README or an editor.
+
+```sh
+envtool schema .env.example                  # Markdown table
+envtool schema -f jsonschema .env.example    # JSON Schema draft 2020-12
+```
+
+The table has name, type with constraints, required, default and the comment
+text as description. The JSON Schema describes the object that `envtool
+export -f json` prints: every property is a string, and the declared type
+becomes a `pattern` (int, port, bool, duration), a `format` (`uri`, `email`)
+or an `enum`. Length bounds map to `minLength`/`maxLength`; numeric bounds on
+`int` and `port` have no JSON Schema form for a string and are only enforced
+by `check`. Patterns are copied as written, so stick to syntax that Go and
+ECMA-262 regexes share (no `(?i)`) if other validators will read the schema.
+
+Defaults of keys that look secret (same matchers as `redact`) are left out of
+both formats.
 
 ### redact
 

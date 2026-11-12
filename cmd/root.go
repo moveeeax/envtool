@@ -8,7 +8,7 @@ var version = "dev"
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "envtool",
-		Short:         "envtool merges, diffs, validates and redacts .env files",
+		Short:         "envtool merges, diffs, validates, checks and redacts .env files",
 		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -21,6 +21,8 @@ func newRootCmd() *cobra.Command {
 		newExportCmd(),
 		newKeysCmd(),
 		newGetCmd(),
+		newCheckCmd(),
+		newSchemaCmd(),
 	)
 	return root
 }

@@ -1,6 +1,9 @@
 package env
 
-import "sort"
+import (
+	"sort"
+	"strings"
+)
 
 // Entry is a single key/value pair from a dotenv document. Order of entries is
 // preserved so that formatting round-trips stay close to the original file.
@@ -96,4 +99,19 @@ func (d *Doc) SortedCopy() *Doc {
 		out.Set(k, v)
 	}
 	return out
+}
+
+// FromEnviron builds a document from "KEY=VALUE" strings as returned by
+// os.Environ. Entries without '=' or with a key that would not parse in a
+// dotenv file (Windows' "=C:" drive variables, for one) are skipped.
+func FromEnviron(environ []string) *Doc {
+	d := New()
+	for _, kv := range environ {
+		k, v, ok := strings.Cut(kv, "=")
+		if !ok || validateKey(k) != nil {
+			continue
+		}
+		d.Set(k, v)
+	}
+	return d
 }
